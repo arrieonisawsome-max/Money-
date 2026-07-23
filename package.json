@@ -1,0 +1,15 @@
+{
+  "name": "moneyos-dashboard",
+  "version": "1.0.0",
+  "description": "MoneyOS — a personal financial command center dashboard with an AI money coach.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
