@@ -51,78 +51,46 @@ const BADGE_DEFS = [
   { id: 'invested', name: 'First Investment', emoji: '📈', check: s => s.investments.length > 0 }
 ];
 
-// ===================== Seed data =====================
+// ===================== Blank starting state =====================
+// No demo numbers, no seeded transactions/goals/bills — a brand-new user
+// starts at exactly $0 across the board and builds their own picture
+// during onboarding (see js/onboarding.js) or by adding things themselves.
 
-function seedState() {
-  const today = new Date();
-  const iso = d => d.toISOString().slice(0, 10);
+const CATEGORY_SUGGESTIONS = [
+  { name: 'Housing', icon: '🏠' }, { name: 'Food & Dining', icon: '🍔' }, { name: 'Transport', icon: '🚗' },
+  { name: 'Subscriptions', icon: '📱' }, { name: 'Personal', icon: '👔' }, { name: 'Entertainment', icon: '🎬' },
+  { name: 'Fitness / Business', icon: '💪' }
+];
+
+function emptyState(name = 'there') {
   return {
-    profile: { name: 'Arrieon', currency: 'USD', theme: 'dark', avatar: '💪', mode: 'personal' },
-    members: [{ id: uid(), name: 'Arrieon', role: 'Owner' }],
-    accounts: [
-      { id: uid(), name: 'Checking', type: 'checking', balance: 434, business: false },
-      { id: uid(), name: 'Savings', type: 'savings', balance: 1240, business: false }
-    ],
-    transactions: seedTransactions(today),
-    categories: [
-      { id: uid(), name: 'Housing', icon: '🏠', budget: 1000, rollover: false, rolloverBalance: 0 },
-      { id: uid(), name: 'Food & Dining', icon: '🍔', budget: 200, rollover: true, rolloverBalance: 0 },
-      { id: uid(), name: 'Transport', icon: '🚗', budget: 100, rollover: true, rolloverBalance: 0 },
-      { id: uid(), name: 'Fitness / Business', icon: '💪', budget: 200, rollover: true, rolloverBalance: 0 },
-      { id: uid(), name: 'Subscriptions', icon: '📱', budget: 100, rollover: false, rolloverBalance: 0 },
-      { id: uid(), name: 'Personal', icon: '👔', budget: 100, rollover: true, rolloverBalance: 0 }
-    ],
+    profile: { name, currency: 'USD', theme: 'dark', avatar: '💪', mode: 'personal', onboarded: false },
+    members: [{ id: uid(), name, role: 'Owner' }],
+    accounts: [],
+    transactions: [],
+    categories: [],
     lastRolloverMonth: null,
-    goals: [
-      { id: uid(), name: 'Fitness Business Fund', type: 'business', icon: '💼', target: 1000, current: 420, milestonesHit: [25] },
-      { id: uid(), name: 'Bahamas Trip Fund', type: 'vacation', icon: '🏖️', target: 2000, current: 500, milestonesHit: [25] },
-      { id: uid(), name: 'Content Creator Gear', type: 'custom', icon: '📱', target: 500, current: 340, milestonesHit: [25, 50] },
-      { id: uid(), name: 'NASM Certification', type: 'custom', icon: '📈', target: 750, current: 600, milestonesHit: [25, 50, 75] }
-    ],
-    sinkingFunds: [
-      { id: uid(), name: 'Gifts', icon: '🎁', balance: 80, monthlyContribution: 20 },
-      { id: uid(), name: 'Car Fund', icon: '🚗', balance: 200, monthlyContribution: 50 },
-      { id: uid(), name: 'Clothes', icon: '👔', balance: 60, monthlyContribution: 15 },
-      { id: uid(), name: 'Medical', icon: '🏥', balance: 100, monthlyContribution: 25 }
-    ],
-    emergencyFund: { target: 3000, current: 540 },
-    bills: [
-      { id: uid(), name: 'Rent', amount: 750, dueDay: 1, autopay: false, category: 'Housing', history: [{ date: iso(today), amount: 750 }] },
-      { id: uid(), name: 'Phone Bill', amount: 65, dueDay: 26, autopay: false, category: 'Subscriptions', history: [{ date: iso(today), amount: 65 }] },
-      { id: uid(), name: 'Gym Membership', amount: 49.99, dueDay: 26, autopay: false, category: 'Fitness / Business', history: [{ date: iso(today), amount: 49.99 }] }
-    ],
-    subscriptions: [
-      { id: uid(), name: 'Netflix', amount: 15.99, cycle: 'monthly', category: 'Subscriptions', autopay: true, priceHistory: [{ date: iso(today), amount: 15.99 }] },
-      { id: uid(), name: 'CapCut Pro', amount: 7.99, cycle: 'monthly', category: 'Subscriptions', autopay: true, priceHistory: [{ date: iso(today), amount: 7.99 }] },
-      { id: uid(), name: 'Spotify', amount: 9.99, cycle: 'monthly', category: 'Subscriptions', autopay: false, priceHistory: [{ date: iso(today), amount: 9.99 }] }
-    ],
-    income: [
-      { id: uid(), source: 'Gym Job — W2', type: 'w2', amount: 667, cadence: 'biweekly', nextDate: iso(addDays(today, 13)) },
-      { id: uid(), source: 'Personal Training Clients', type: 'side', amount: 0, cadence: 'irregular', nextDate: '' },
-      { id: uid(), source: 'Online Coaching Program', type: 'side', amount: 0, cadence: 'irregular', nextDate: '' }
-    ],
-    investments: [
-      { id: uid(), name: 'S&P 500 ETF', ticker: 'VOO', shares: 0.45, price: 444, history: genHistory(390, 444) },
-      { id: uid(), name: 'Apple', ticker: 'AAPL', shares: 0.53, price: 189, history: genHistory(165, 189) }
-    ],
+    goals: [],
+    sinkingFunds: [],
+    emergencyFund: { target: 0, current: 0 },
+    bills: [],
+    subscriptions: [],
+    income: [],
+    investments: [],
     dividends: [],
-    retirement: { target: 1200000, current: 350, targetAge: 65, currentAge: 24 },
-    riskScore: 6,
-    netWorthHistory: [
-      { date: '2026-01', value: 800 }, { date: '2026-02', value: 940 }, { date: '2026-03', value: 1100 },
-      { date: '2026-04', value: 1200 }, { date: '2026-05', value: 1450 }, { date: '2026-06', value: 1680 },
-      { date: '2026-07', value: 2024 }
-    ],
-    creditScore: [{ date: iso(addDays(today, -60)), score: 680 }, { date: iso(addDays(today, -20)), score: 702 }],
+    retirement: { target: 0, current: 0, targetAge: 65, currentAge: 25 },
+    riskScore: 5,
+    netWorthHistory: [],
+    creditScore: [],
     journal: [],
     gamification: {
-      xp: 2450, level: 7, badges: ['first_save', 'streak5', 'budget_set', 'goal_maker'],
-      streak: { count: 5, lastDate: iso(today), history: {} },
+      xp: 0, level: 1, badges: [],
+      streak: { count: 0, lastDate: null, history: {} },
       missions: [], missionsWeek: null
     },
     automation: {
-      smartRules: [{ id: uid(), ifCategory: 'Food & Dining', op: '>', amount: 40, action: 'alert' }],
-      autoInvest: { enabled: false, amount: 25, cadence: 'biweekly' },
+      smartRules: [],
+      autoInvest: { enabled: false, amount: 0, cadence: 'biweekly' },
       autoSave: { enabled: false, percent: 10, targetGoalId: '' }
     },
     security: { biometricEnabled: false, biometricCredId: '', passphraseEnabled: false, totpEnabled: false, totpSecret: '' },
@@ -132,34 +100,40 @@ function seedState() {
   };
 }
 
-function seedTransactions(today) {
-  const iso = d => d.toISOString().slice(0, 10);
-  const mk = (daysAgo, amount, category, note, type = 'expense') => ({
-    id: uid(), date: iso(addDays(today, -daysAgo)), amount, category, note, type, account: 'Checking', business: false
-  });
-  return [
-    mk(1, 22, 'Food & Dining', 'Chipotle'),
-    mk(2, 700, 'Housing', 'Rent'),
-    mk(3, 40, 'Transport', 'Gas'),
-    mk(4, 15.99, 'Subscriptions', 'Netflix'),
-    mk(5, 60, 'Fitness / Business', 'Supplements'),
-    mk(6, 90, 'Food & Dining', 'Groceries'),
-    mk(13, 667, 'Income', 'Gym paycheck', 'income'),
-    mk(0, 434, 'Income', 'Starting balance', 'income')
-  ];
-}
-
+// Short synthetic price trend around a real entered price, used only as a
+// chart baseline for a brand-new holding until enough real history builds up.
 function genHistory(start, end) {
   const out = [];
-  const days = 30;
+  const days = 14;
   for (let i = days; i >= 0; i--) {
     const t = i / days;
-    const noise = (Math.sin(i * 1.7) * 0.01);
-    const price = start + (end - start) * (1 - t) + start * noise;
+    const price = start + (end - start) * (1 - t);
     const d = addDays(new Date(), -i);
-    out.push({ date: d.toISOString().slice(0, 10), price: Math.max(1, +price.toFixed(2)) });
+    out.push({ date: d.toISOString().slice(0, 10), price: Math.max(0.01, +price.toFixed(2)) });
   }
   return out;
+}
+
+// Remembers what a paycheck actually was and rolls the source forward to
+// the next expected date, so the app "learns" the user's real income.
+function advanceIncomeSource(source, loggedAmount, fromDateStr) {
+  source.amount = loggedAmount;
+  const from = fromDateStr ? new Date(fromDateStr) : new Date();
+  const step = { weekly: 7, biweekly: 14, monthly: 30, irregular: 0 }[source.cadence] || 0;
+  source.nextDate = step ? addDays(from, step).toISOString().slice(0, 10) : source.nextDate;
+}
+
+// Captures one net-worth data point per calendar month of actual use,
+// so the growth chart reflects this user's real trajectory over time.
+function recordMonthlySnapshot(s) {
+  const month = isoMonth(new Date().toISOString());
+  const last = s.netWorthHistory[s.netWorthHistory.length - 1];
+  if (!last || last.date !== month) {
+    s.netWorthHistory.push({ date: month, value: netWorth(s) });
+    if (s.netWorthHistory.length > 24) s.netWorthHistory.shift();
+  } else {
+    last.value = netWorth(s);
+  }
 }
 
 // ===================== Utilities =====================

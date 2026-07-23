@@ -16,6 +16,20 @@ Visit http://localhost:3000. All your data lives in your browser's
 localStorage — nothing is sent anywhere except the two AI-powered features
 below, which call your own server.
 
+## Zero demo data — it's yours from the first screen
+
+There's no seeded "sample user." The first time you open MoneyOS you get a
+one-minute setup wizard (name → income → starting balances → optional
+budget categories, each step skippable) and the app starts at exactly $0
+everywhere. Every calculation — safe-to-spend, health score, net worth,
+projections — is derived live from what you enter, so it works the same
+whether your numbers are in the hundreds or the hundreds of thousands.
+
+Income sources remember themselves: add a paycheck once (amount + cadence)
+and MoneyOS pre-fills that amount every time you hit **Log Paycheck**, then
+rolls the "next expected" date forward automatically. Actual amounts vary
+pay to pay, so logging one updates what's remembered for next time.
+
 ## Why there's a server
 
 The AI Coach and Receipt Scanner call the Anthropic API. That call **must**
@@ -104,8 +118,9 @@ faked:
 ```
 index.html          App shell (boot/lock screen + sidebar + page container)
 css/style.css        All styling, incl. themes and responsive rules
-js/app.js             State, seed data, all financial calculations
+js/app.js             State, blank starting state, all financial calculations
 js/app-pages.js       UI rendering for every page + CRUD forms
+js/onboarding.js       First-run setup wizard (name, income, balances, budget)
 js/app-init.js        Boot sequence, security gates, PWA wiring
 js/crypto.js          AES-GCM encryption + TOTP (Web Crypto API, no deps)
 js/webauthn.js        Biometric unlock via the browser WebAuthn API

@@ -144,7 +144,9 @@ function pageDashboard(s) {
   const b = budgetSummary(s);
   const hs = healthScore(s);
   const rec = aiHeuristicRecommendation(s);
+  const isNew = s.income.length === 0 && s.accounts.length === 0 && s.transactions.length === 0;
   return `
+  ${isNew ? `<div class="getting-started"><h3>👋 Let's get your numbers in</h3><p class="muted-text" style="margin:0">Add your income so MoneyOS can tell you what's safe to spend — it remembers each paycheck for next time.</p><div class="ob-actions"><button class="btn-primary" onclick="navigate('income')">Add Income</button><button class="btn-secondary" onclick="openAddTransaction()">Log a Transaction</button></div></div>` : ''}
   <div class="afford-bar">
     <div>
       <div class="afford-question">Can I afford this right now?</div>
@@ -224,32 +226,69 @@ function checkAfford() {
 }
 
 function openAddTransaction(prefill = {}) {
-  const cats = STATE.categories.map(c => ({ value: c.name, label: c.name }));
+  const type = prefill.type || 'expense';
+  renderTxnModal({ ...prefill, type });
+}
+
+function renderTxnModal(prefill) {
+  const cats = STATE.categories.map(c => ({ value: c.name, label: `${c.icon} ${c.name}` }));
+  const catField = cats.length
+    ? formRow('Category', selectHtml('category', cats, prefill.category || cats[0]?.value))
+    : `<div class="muted-text" style="margin-bottom:12px">No categories yet — one will be created automatically from your note (you can rename/budget it later on the Budget page).</div>`;
+  const sourceOptions = [{ value: '', label: '— One-off / other —' }, ...STATE.income.map(i => ({ value: i.id, label: `${i.source} (usually ${money(i.amount)})` }))];
+  const incomeField = STATE.income.length
+    ? formRow('Income source', selectHtml('sourceId', sourceOptions, prefill.sourceId || ''))
+    : '';
   const body = `
-    ${formRow('Type', selectHtml('type', [{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }], prefill.type || 'expense'))}
-    ${formRow('Amount', input('amount', prefill.amount || '', 'number', 'step="0.01"'))}
+    ${formRow('Type', selectHtml('type', [{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }], prefill.type || 'expense').replace('<select', '<select onchange="onTxnTypeChange(this.value)"'))}
+    <div id="txn-income-field">${prefill.type === 'income' ? incomeField : ''}</div>
+    ${formRow('Amount', input('amount', prefill.amount || '', 'number', 'step="0.01" id="txn-amount-input"'))}
     ${formRow('Note', input('note', prefill.note || '', 'text'))}
-    ${formRow('Category', selectHtml('category', cats, prefill.category || cats[0]?.value))}
+    <div id="txn-category-field">${prefill.type === 'income' ? '' : catField}</div>
     ${formRow('Date', input('date', new Date().toISOString().slice(0, 10), 'date'))}
     ${STATE.profile.mode !== 'personal' ? formRow('Business expense?', checkboxHtml('business', false)) : ''}
   `;
   openModal('Add Transaction', body, (data) => {
-    if (!data.category && data.note) data.category = autoCategorize(data.note);
-    const txn = { id: uid(), date: data.date, amount: Math.abs(data.amount), category: data.category, note: data.note, type: data.type, account: 'Checking', business: !!data.business };
+    let category = data.category;
+    if (data.type === 'income') category = 'Income';
+    else if (!category && data.note) category = autoCategorize(data.note);
+    else if (!category) category = 'Uncategorized';
+    if (data.type === 'expense' && !STATE.categories.some(c => c.name === category)) {
+      const suggestion = CATEGORY_SUGGESTIONS.find(s => s.name === category);
+      STATE.categories.push({ id: uid(), name: category, icon: suggestion?.icon || '🏷️', budget: 0, rollover: false, rolloverBalance: 0 });
+    }
+    const amount = Math.abs(data.amount) || 0;
+    const txn = { id: uid(), date: data.date, amount, category, note: data.note, type: data.type, account: 'Checking', business: !!data.business };
     STATE.transactions.push(txn);
     if (txn.type === 'expense') runSmartRules(STATE, txn);
-    if (txn.type === 'income' && STATE.automation.autoSave.enabled) {
-      const pct = STATE.automation.autoSave.percent / 100;
-      const goal = STATE.goals.find(g => g.id === STATE.automation.autoSave.targetGoalId) || STATE.emergencyFund;
-      const amt = +(txn.amount * pct).toFixed(2);
-      if (goal === STATE.emergencyFund) STATE.emergencyFund.current += amt; else goal.current += amt;
-      notify(STATE, 'good', `Auto-save moved ${money(amt)} (${STATE.automation.autoSave.percent}% of income) into savings.`);
+    if (txn.type === 'income') {
+      const source = STATE.income.find(i => i.id === data.sourceId);
+      if (source) advanceIncomeSource(source, amount, data.date);
+      if (STATE.automation.autoSave.enabled) {
+        const pct = STATE.automation.autoSave.percent / 100;
+        const goal = STATE.goals.find(g => g.id === STATE.automation.autoSave.targetGoalId) || STATE.emergencyFund;
+        const amt = +(amount * pct).toFixed(2);
+        if (goal === STATE.emergencyFund) STATE.emergencyFund.current += amt; else goal.current += amt;
+        notify(STATE, 'good', `Auto-save moved ${money(amt)} (${STATE.automation.autoSave.percent}% of income) into savings.`);
+      }
     }
     awardXP(STATE, XP_RULES.addTransaction, 'txn');
     bumpMission(STATE, 'txns');
     logDailyActivity(STATE);
     closeModal(); rerender();
   });
+}
+function onTxnTypeChange(type) {
+  const isIncome = type === 'income';
+  const cats = STATE.categories.map(c => ({ value: c.name, label: `${c.icon} ${c.name}` }));
+  const catField = cats.length ? formRow('Category', selectHtml('category', cats, cats[0]?.value)) : `<div class="muted-text" style="margin-bottom:12px">No categories yet — one will be created automatically from your note.</div>`;
+  document.getElementById('txn-category-field').innerHTML = isIncome ? '' : catField;
+  const sourceOptions = [{ value: '', label: '— One-off / other —' }, ...STATE.income.map(i => ({ value: i.id, label: `${i.source} (usually ${money(i.amount)})` }))];
+  document.getElementById('txn-income-field').innerHTML = isIncome && STATE.income.length ? formRow('Income source', selectHtml('sourceId', sourceOptions, '').replace('<select', `<select onchange="onIncomeSourceChange(this.value)"`)) : '';
+}
+function onIncomeSourceChange(sourceId) {
+  const source = STATE.income.find(i => i.id === sourceId);
+  if (source && source.amount) document.getElementById('txn-amount-input').value = source.amount;
 }
 
 // ===================== BUDGET =====================
@@ -364,11 +403,24 @@ function pageIncome(s) {
   <div class="stat-card" style="margin-bottom:16px"><div class="stat-label">Estimated Monthly Income</div><div class="stat-value" style="color:var(--accent)">${money(monthly)}</div></div>
   <div class="card">
     <div class="card-title">All Income Sources</div>
-    ${s.income.map(i => `<div class="income-row"><div><div class="income-source">${escapeHtml(i.source)} <span class="badge">${i.type}</span></div><div class="income-type">${i.cadence}${i.nextDate ? ' · next ' + i.nextDate : ''}</div></div><div style="display:flex;align-items:center;gap:10px"><div class="income-amount">${money(i.amount)}</div><button class="link-btn" onclick="openEditIncome('${i.id}')">Edit</button><button class="link-btn danger" onclick="deleteIncome('${i.id}')">✕</button></div></div>`).join('')}
+    ${s.income.map(i => `<div class="income-row"><div><div class="income-source">${escapeHtml(i.source)} <span class="badge">${i.type}</span></div><div class="income-type">${i.cadence}${i.nextDate ? ' · next ' + i.nextDate : ''}${i.amount ? ' · remembers ' + money(i.amount) + '/pay' : ''}</div></div><div style="display:flex;align-items:center;gap:10px"><button class="btn-secondary sm" onclick="logPaycheck('${i.id}')">Log Paycheck</button><button class="link-btn" onclick="openEditIncome('${i.id}')">Edit</button><button class="link-btn danger" onclick="deleteIncome('${i.id}')">✕</button></div></div>`).join('') || '<div class="empty">No income sources yet — add your job, side hustle, or any other income to get started.</div>'}
   </div>
   <div class="card"><div class="card-title">Paycheck Calendar</div>
-    ${s.income.filter(i => i.nextDate).map(i => `<div class="bill-row"><div class="bill-name">${escapeHtml(i.source)}</div><div class="bill-amount">${i.nextDate}</div></div>`).join('') || '<div class="empty">No upcoming paychecks scheduled.</div>'}
+    ${s.income.filter(i => i.nextDate).sort((a, b) => a.nextDate.localeCompare(b.nextDate)).map(i => `<div class="bill-row"><div class="bill-name">${escapeHtml(i.source)}</div><div class="bill-amount">${i.nextDate}</div></div>`).join('') || '<div class="empty">No upcoming paychecks scheduled.</div>'}
   </div>`;
+}
+function logPaycheck(id) {
+  const source = STATE.income.find(i => i.id === id);
+  const body = `${formRow('Amount received', input('amount', source.amount || '', 'number'))}${formRow('Date', input('date', new Date().toISOString().slice(0, 10), 'date'))}`;
+  openModal(`Log Paycheck — ${source.source}`, body, (d) => {
+    STATE.transactions.push({ id: uid(), date: d.date, amount: Math.abs(d.amount), category: 'Income', note: source.source, type: 'income', account: 'Checking', business: false });
+    advanceIncomeSource(source, Math.abs(d.amount), d.date);
+    awardXP(STATE, XP_RULES.addTransaction, 'paycheck');
+    logDailyActivity(STATE);
+    checkBadges(STATE);
+    notify(STATE, 'good', `Logged ${money(d.amount)} from ${source.source}. Next expected: ${source.nextDate || '—'}.`);
+    closeModal(); rerender();
+  }, 'Log');
 }
 const INCOME_TYPES = [{ value: 'w2', label: 'W2 Job' }, { value: 'side', label: 'Side Hustle' }, { value: 'other', label: 'Other' }];
 const CADENCES = [{ value: 'weekly', label: 'Weekly' }, { value: 'biweekly', label: 'Bi-weekly' }, { value: 'monthly', label: 'Monthly' }, { value: 'irregular', label: 'Irregular' }];

@@ -10,6 +10,7 @@ function startApp(state) {
   logDailyActivity(STATE);
   ensureWeeklyMissions(STATE);
   checkDueAutopay(STATE);
+  recordMonthlySnapshot(STATE);
   runNotificationChecks(STATE);
   checkBadges(STATE);
   document.documentElement.setAttribute('data-theme', STATE.profile.theme || 'dark');
@@ -38,8 +39,11 @@ async function boot() {
     return;
   }
   const plain = localStorage.getItem(STATE_KEY);
-  const state = plain ? JSON.parse(plain) : seedState();
-  postDecryptGates(state);
+  if (!plain) {
+    runOnboarding(postDecryptGates);
+    return;
+  }
+  postDecryptGates(JSON.parse(plain));
 }
 
 function showPassphraseGate(blob) {
