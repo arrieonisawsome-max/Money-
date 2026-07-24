@@ -64,7 +64,7 @@ function svgBars(points) {
 }
 function svgDonut(segments) {
   const size = 150, r = 55, cx = 75, cy = 75, circumference = 2 * Math.PI * r;
-  const colors = ['var(--accent)', 'var(--accent2)', 'var(--blue)', 'var(--accent3)', 'var(--red)', '#a78bfa'];
+  const colors = ['var(--accent)', 'var(--accent2)', 'var(--blue)', 'var(--positive)', 'var(--accent3)', '#7f1d1d'];
   let accFrac = 0;
   const circles = segments.map((s, i) => {
     const frac = s.pct / 100;
@@ -173,7 +173,7 @@ function pageDashboard(s) {
     <div class="stat-card"><div class="stat-label">Cash Available</div><div class="stat-value" style="color:var(--accent)">${money(totalCash(s))}</div></div>
     <div class="stat-card"><div class="stat-label">Total Savings</div><div class="stat-value">${money(totalSavings(s))}</div></div>
     <div class="stat-card"><div class="stat-label">Investments</div><div class="stat-value">${money(investmentValue(s))}</div></div>
-    <div class="stat-card"><div class="stat-label">Net Worth</div><div class="stat-value" style="color:var(--accent2)">${money(netWorth(s))}</div></div>
+    <div class="stat-card"><div class="stat-label">Net Worth</div><div class="stat-value" style="color:var(--accent)">${money(netWorth(s))}</div></div>
   </div>
 
   <div class="grid-2">
@@ -669,7 +669,7 @@ function pageAnalytics(s) {
     </div>
   </div>
   <div class="card"><div class="card-title">Spending Trend — Last 6 Months</div>${svgBars(spendSeries.map(p => ({ ...p, color: 'var(--red)' })))}</div>
-  <div class="card"><div class="card-title">Income Trend — Last 6 Months</div>${svgBars(incomeSeries.map(p => ({ ...p, color: 'var(--accent)' })))}</div>
+  <div class="card"><div class="card-title">Income Trend — Last 6 Months</div>${svgBars(incomeSeries.map(p => ({ ...p, color: 'var(--positive)' })))}</div>
   <div class="card"><div class="card-title">Net Worth Growth</div>${svgLine(s.netWorthHistory.map(h => ({ label: h.date.slice(5), value: h.value })).concat([{ label: 'Now', value: netWorth(s) }]))}</div>
   `;
 }

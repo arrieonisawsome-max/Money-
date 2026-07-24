@@ -30,10 +30,9 @@ const CATEGORY_KEYWORDS = {
 const XP_RULES = { addTransaction: 10, hitBudgetGoal: 50, contributeGoal: 20, dailyOpen: 15, payBill: 5 };
 
 const THEMES = [
-  { id: 'dark', name: 'Void (default)', level: 1 },
-  { id: 'midnight', name: 'Midnight Blue', level: 3 },
-  { id: 'sunset', name: 'Sunset', level: 5 },
-  { id: 'mono', name: 'Mono Light', level: 8 }
+  { id: 'light', name: 'MoneyOS Red (default)', level: 1 },
+  { id: 'dark', name: 'Midnight Red', level: 3 },
+  { id: 'mono', name: 'Pure Mono', level: 6 }
 ];
 const AVATARS = [
   { id: '💪', level: 1 }, { id: '🚀', level: 2 }, { id: '🦁', level: 4 },
@@ -64,7 +63,7 @@ const CATEGORY_SUGGESTIONS = [
 
 function emptyState(name = 'there') {
   return {
-    profile: { name, currency: 'USD', theme: 'dark', avatar: '💪', mode: 'personal', onboarded: false },
+    profile: { name, currency: 'USD', theme: 'light', avatar: '💪', mode: 'personal', onboarded: false },
     members: [{ id: uid(), name, role: 'Owner' }],
     accounts: [],
     transactions: [],
